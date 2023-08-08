@@ -1,0 +1,85 @@
+version: '2'
+services:
+  redpanda:
+    command:
+    - redpanda
+    - start
+    - --set pandaproxy_client.retries=6
+    - --smp
+    - '1'
+    - --reserve-memory
+    - 0M
+    - --overprovisioned
+    - --node-id
+    - '0'
+    - --kafka-addr
+    - PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+    - --advertise-kafka-addr
+    - PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+    - --set redpanda.enable_idempotence=true
+    - --set redpanda.enable_transactions=true
+    - --set pandaproxy_client.produce_batch_delay_ms=0
+    - --set pandaproxy_client.brokers.address=0.0.0.0
+    - --set pandaproxy_client.brokers.port=9092
+    - --advertise-pandaproxy-addr localhost:8082
+    #- --advertise-pandaproxy-addr 10.11.12.177:8082
+ 
+    # NOTE: Please use the latest version here!
+    image: docker.redpanda.com/vectorized/redpanda:latest
+    container_name: redpanda
+    ports:
+    - 8080:8081
+    - 8082:8082
+    - 9092:9092
+    - 29092:29092
+  console:
+    image: vectorized/console:latest
+    entrypoint: /bin/sh
+    command: -c "echo \"$$CONSOLE_CONFIG_FILE\" > /tmp/config.yml; /app/console"
+    environment:
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["redpanda:29092"]
+          schemaRegistry:
+            enabled: true
+            urls: ["http://redpanda:8081"]
+        redpanda:
+          adminApi:
+            enabled: true
+            urls: ["http://redpanda:9644"]
+        connect:
+          enabled: false
+          clusters:
+            - name: local-connect-cluster
+              url: http://connect:8083
+    ports:
+      - 8084:8080
+    depends_on:
+      - redpanda
+  # kafka-ui:
+  #   container_name: kafka-ui
+  #   image: provectuslabs/kafka-ui:latest
+  #   ports:
+  #     - 8086:8080
+  #   depends_on:
+  #     - redpanda
+  #   environment:
+  #     KAFKA_CLUSTERS_0_NAME: local
+  #     KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: redpanda:29092
+  #     KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://redpanda:8081
+  #     KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: first
+  #     KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
+  #     DYNAMIC_CONFIG_ENABLED: 'true'
+  # kafka-rest-1:
+  #   image: confluentinc/cp-kafka-rest:latest
+  #   hostname: kafka-rest-1
+  #   container_name: kafka-rest-1
+  #   depends_on:
+  #     - redpanda
+  #   ports:
+  #     - "8087:8082"
+  #   environment:
+  #     KAFKA_REST_LISTENERS: http://0.0.0.0:8082
+  #     KAFKA_REST_SCHEMA_REGISTRY_URL: http://redpanda:8081
+  #     KAFKA_REST_BOOTSTRAP_SERVERS: redpanda:29092
