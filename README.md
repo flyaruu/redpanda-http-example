@@ -2,7 +2,10 @@
 
 ## Example for using the RedPanda HTTP crate
 
-Make sure you have docker installed.
+CI:
+[![CircleCI](https://circleci.com/gh/flyaruu/redpanda-http-example.svg?style=svg)](https://circleci.com/gh/flyaruu/redpanda-http-example)
+
+Make sure you have docker installed, and the usual Rust stuff.
 
 Run:
 ```bash
